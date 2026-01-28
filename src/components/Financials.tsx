@@ -120,7 +120,7 @@ export default function Financials() {
             {/* Modal de Nova Transação Manual */}
             {showAddModal && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden border border-white animate-in zoom-in-95 duration-300">
+                    <div className="bg-white w-full max-w-[95%] sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-[32px] shadow-2xl border border-white animate-in zoom-in-95 duration-300 custom-scrollbar">
                         <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-[#F8FAFC]">
                             <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{t('manualRecord')}</h3>
                             <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400">&times;</button>

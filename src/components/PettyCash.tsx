@@ -199,9 +199,11 @@ export default function PettyCash() {
 
             {/* Add Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowAddModal(false)} />
-                    <div className="bg-white rounded-[40px] w-full max-w-md shadow-2xl relative overflow-hidden animate-in fade-in zoom-in duration-300">
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div
+                        className="bg-white w-full max-w-[95%] sm:max-w-md max-h-[90vh] overflow-y-auto rounded-[32px] shadow-2xl border border-slate-100 animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 custom-scrollbar"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
