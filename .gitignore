@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-server
+.env
+*.log
+.DS_Store
+dist_electron
+*.db
+*.db-journal
+uploads/*
+!uploads/.gitkeep

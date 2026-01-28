@@ -1,0 +1,6 @@
+DATABASE_URL="postgresql://postgres:808090@localhost:5432/sistema_de_gestao?schema=public"
+# Email Configuration (SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=mobileicaar@gmail.com
+SMTP_PASS=2461028177444905
