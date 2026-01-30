@@ -2283,16 +2283,26 @@ const server = httpServer.listen(Number(PORT), HOST, async () => {
 
         // If we are in production and it's a fresh deploy, try a push in background
         if (process.env.RAILWAY_ENVIRONMENT || process.env.RENDER) {
-            console.log('[Database] Running background schema sync...');
-            try {
-                const { exec } = await import('child_process');
-                exec('npx prisma db push --accept-data-loss', (err, stdout, stderr) => {
-                    if (err) console.error('[Database] Background sync error:', err.message);
-                    else console.log('[Database] Background sync complete.');
-                });
-            } catch (e) {
-                console.error('[Database] Failed to trigger background sync.');
-            }
+            const runDbPush = (attempt = 1) => {
+                console.log(`[Database] Running background schema sync (Attempt ${attempt})...`);
+                import('child_process').then(({ exec }) => {
+                    exec('npx prisma db push --accept-data-loss', (err) => {
+                        if (err) {
+                            console.error(`[Database] Background sync error (Attempt ${attempt}):`, err.message);
+                            if (attempt < 3) {
+                                console.log('[Database] Retrying sync in 10s...');
+                                setTimeout(() => runDbPush(attempt + 1), 10000);
+                            }
+                        } else {
+                            console.log('[Database] Background sync complete. Tables verified.');
+                            setupAdmin();
+                        }
+                    });
+                }).catch(e => console.error('[Database] Failed to import child_process'));
+            };
+            runDbPush();
+        } else {
+            setupAdmin();
         }
     }, 1000);
 
@@ -2328,8 +2338,7 @@ const server = httpServer.listen(Number(PORT), HOST, async () => {
         console.error('❌ Failed to ensure default admin after multiple attempts.');
     };
 
-    // Run setup in background
-    setTimeout(() => setupAdmin(), 2000);
+    // Run setup is now called as part of DB sync callback
 });
 
 server.on('error', (e: any) => {
