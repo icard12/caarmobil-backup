@@ -2286,7 +2286,10 @@ const server = httpServer.listen(Number(PORT), HOST, async () => {
             const runDbPush = (attempt = 1) => {
                 console.log(`[Database] Running background schema sync (Attempt ${attempt})...`);
                 import('child_process').then(({ exec }) => {
-                    exec('npx prisma db push --accept-data-loss', (err) => {
+                    exec('npx prisma db push --accept-data-loss', (err, stdout, stderr) => {
+                        if (stdout) console.log(`[Database Sync Output]: ${stdout}`);
+                        if (stderr) console.error(`[Database Sync Stderr]: ${stderr}`);
+
                         if (err) {
                             console.error(`[Database] Background sync error (Attempt ${attempt}):`, err.message);
                             if (attempt < 3) {
