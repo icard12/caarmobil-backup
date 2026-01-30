@@ -44,16 +44,31 @@ app.get('/api/diagnostics', async (req, res) => {
     const diagnostics: any = {
         platform: platformName,
         node_env: process.env.NODE_ENV,
+        railway_env: process.env.RAILWAY_ENVIRONMENT || 'not-set',
         database: {
             url_present: !!process.env.DATABASE_URL,
             url_length: process.env.DATABASE_URL?.length || 0,
             provider: process.env.DATABASE_URL?.startsWith('postgresql') ? 'postgresql' : (process.env.DATABASE_URL?.startsWith('file') ? 'sqlite' : 'unknown')
+        },
+        system: {
+            uptime: Math.floor(process.uptime()),
+            timestamp: new Date().toISOString()
         }
     };
 
     try {
+        await prisma.$connect();
         await prisma.$queryRaw`SELECT 1`;
         diagnostics.database.connection = 'connected';
+
+        // Check if a core table exists
+        try {
+            await prisma.user.findFirst();
+            diagnostics.database.tables = 'found';
+        } catch (tableError: any) {
+            diagnostics.database.tables = 'missing or error';
+            diagnostics.database.table_error = tableError.message;
+        }
     } catch (e: any) {
         diagnostics.database.connection = 'failed';
         diagnostics.database.error = e.message;
@@ -104,44 +119,53 @@ const server = httpServer.listen(Number(PORT), HOST, () => {
     console.log(`📍 URL: http://${HOST}:${PORT}`);
 });
 
-// Resilient Background Initializer
+// Robust Background Initializer
 async function initializeDatabase(attempt = 1) {
+    if (attempt > 10) {
+        console.error('❌ [DB-Init] Giving up after 10 attempts.');
+        return;
+    }
+
     console.log(`[DB-Init] Connection attempt ${attempt}...`);
     try {
         await prisma.$connect();
         await prisma.$queryRaw`SELECT 1`;
-        console.log('✅ Database connected successfully!');
+        console.log('✅ [DB-Init] Database connected successfully!');
 
-        // Now that we are connected, ensure tables and admin exist
-        if (isRailway || isRender) {
-            console.log('[DB-Init] Verifying/Pushing schema to PostgreSQL...');
-            import('child_process').then(({ exec }) => {
-                // Pass process.env explicitly to ensure DATABASE_URL (with SSL fix) is used
-                exec('npx prisma db push --accept-data-loss', { env: process.env }, (err, stdout, stderr) => {
-                    if (stdout) console.log(`[Prisma-Success] ${stdout}`);
-                    if (stderr) console.error(`[Prisma-Error-Logs] ${stderr}`);
+        // Check if we are in production and need to push schema
+        if (isRailway || isRender || process.env.NODE_ENV === 'production') {
+            console.log('[DB-Init] Production detected. Verifying/Pushing schema...');
 
-                    if (err) {
-                        console.error(`[DB-Init] Schema sync failed (Attempt ${attempt}): ${err.message}`);
-                        // Retry sync if it fails
-                        setTimeout(() => initializeDatabase(attempt + 1), 10000);
-                    } else {
-                        console.log('🚀 [DB-Init] SCHEMA SYNCED SUCCESSFULLY! All tables created.');
-                        setupAdmin();
-                    }
-                });
-            }).catch(e => console.error('[DB-Init] Failed to load child_process'));
+            const { exec } = await import('child_process');
+            // Try using absolute path to prisma bin
+            const prismaPath = path.join(_projectRoot, 'node_modules', '.bin', 'prisma');
+            const cmd = `${prismaPath} db push --accept-data-loss`;
+
+            console.log(`[DB-Init] Executing: ${cmd}`);
+
+            exec(cmd, { env: process.env }, (err, stdout, stderr) => {
+                if (stdout) console.log(`[Prisma-Stdout]: ${stdout}`);
+                if (stderr) console.error(`[Prisma-Stderr]: ${stderr}`);
+
+                if (err) {
+                    console.error(`[DB-Init] Schema sync failed (Attempt ${attempt}): ${err.message}`);
+                    setTimeout(() => initializeDatabase(attempt + 1), 10000);
+                } else {
+                    console.log('🚀 [DB-Init] SCHEMA SYNCED SUCCESSFULLY!');
+                    setupAdmin();
+                }
+            });
         } else {
+            console.log('[DB-Init] Local environment, skipping schema push.');
             setupAdmin();
         }
     } catch (error: any) {
         console.error(`❌ [DB-Init] Connection failed on attempt ${attempt}:`, error.message);
-        // Retry connection every 5 seconds
         setTimeout(() => initializeDatabase(attempt + 1), 5000);
     }
 }
 
-// Start the persistent initialization
+// Start persistent initialization
 initializeDatabase();
 
 const io = new Server(httpServer, {
