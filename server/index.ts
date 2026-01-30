@@ -227,6 +227,19 @@ if (fs.existsSync(distDir)) {
     app.use(express.static(distDir));
 }
 
+// Helper for Prisma Errors
+const handlePrismaError = (res: any, error: any, message: string) => {
+    console.error(`[DB Error] ${message}:`, error);
+    let details = 'Erro desconhecido';
+    if (error instanceof Error) {
+        details = error.message;
+        if ((error as any).code) details += ` (Código: ${(error as any).code})`;
+    } else {
+        details = String(error);
+    }
+    res.status(500).json({ error: message, details });
+};
+
 // Global Logging Middleware
 app.use((req, res, next) => {
     // Skip logging for static files to avoid clutter
@@ -279,8 +292,7 @@ app.get('/api/products', async (req, res) => {
         });
         res.json(products);
     } catch (error) {
-        console.error('Error fetching products:', error);
-        res.status(500).json({ error: 'Error fetching products' });
+        handlePrismaError(res, error, 'Erro ao buscar produtos');
     }
 });
 
@@ -652,7 +664,7 @@ app.get('/api/permission-requests', async (req, res) => {
         });
         res.json(requests);
     } catch (error) {
-        res.status(500).json({ error: 'Erro ao buscar solicitações' });
+        handlePrismaError(res, error, 'Erro ao buscar solicitações');
     }
 });
 
@@ -1108,7 +1120,7 @@ app.get('/api/transactions', async (req, res) => {
         });
         res.json(transactions);
     } catch (error) {
-        res.status(500).json({ error: 'Error fetching transactions' });
+        handlePrismaError(res, error, 'Erro ao buscar transações');
     }
 });
 
@@ -1344,11 +1356,7 @@ app.get('/api/services', async (req, res) => {
 
         res.json(mappedServices);
     } catch (error) {
-        console.error('CRITICAL ERROR fetching services:', error);
-        res.status(500).json({
-            error: 'Erro ao buscar ordens de serviço',
-            details: error instanceof Error ? error.message : String(error)
-        });
+        handlePrismaError(res, error, 'Erro ao buscar ordens de serviço');
     }
 });
 
@@ -1729,8 +1737,7 @@ app.get('/api/stats', async (req, res) => {
             lowStockProducts: products.filter(p => p.stock <= p.minStock).length
         });
     } catch (error) {
-        console.error('Stats fetch error:', error);
-        res.status(500).json({ error: 'Erro ao buscar estatísticas' });
+        handlePrismaError(res, error, 'Erro ao buscar estatísticas');
     }
 });
 console.log('/api/stats endpoint registered successfully');

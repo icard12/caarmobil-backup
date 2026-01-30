@@ -19,16 +19,18 @@ if (process.env.RENDER || process.env.RAILWAY_ENVIRONMENT || process.env.NODE_EN
     }
 }
 
-const databaseUrl = process.env.DATABASE_URL;
+let databaseUrl = process.env.DATABASE_URL;
 
-console.log('Effective DATABASE_URL:', databaseUrl ? 'CONECTADO (Protegido)' : 'NÃO ENCONTRADO');
-
-if (databaseUrl && databaseUrl.includes('localhost')) {
-    if (process.env.RENDER || process.env.RAILWAY_ENVIRONMENT) {
-        const platform = process.env.RENDER ? "Render" : "Railway";
-        console.error(`ERRO CRÍTICO: O ${platform} está tentando usar "localhost"! Verifique as variáveis de ambiente no painel do ${platform}.`);
+// Force SSL no-verify for Railway/Render PostgreSQL
+if (databaseUrl && !databaseUrl.includes('sslmode=') && (process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.NODE_ENV === 'production')) {
+    if (databaseUrl.includes('?')) {
+        databaseUrl += '&sslmode=no-verify';
+    } else {
+        databaseUrl += '?sslmode=no-verify';
     }
 }
+
+console.log('Effective DATABASE_URL:', databaseUrl ? (databaseUrl.includes('sslmode') ? 'CONECTADO (SSL)' : 'CONECTADO') : 'NÃO ENCONTRADO');
 
 export const prisma = new PrismaClient({
     datasources: {
