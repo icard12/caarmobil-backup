@@ -39,7 +39,13 @@ if (databaseUrl && (process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 
 
 // 4. Force SSL for Production
 if (databaseUrl && !databaseUrl.includes('sslmode=') && (process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production')) {
-    databaseUrl += databaseUrl.includes('?') ? '&sslmode=no-verify' : '?sslmode=no-verify';
+    // SECURITY: Prevent connecting to localhost in production (common configuration error)
+    if (databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')) {
+        console.error('❌ [DB-Config] CRITICAL: Attempted to use localhost in production/Railway!');
+        databaseUrl = "postgresql://ERROR_LOCALHOST_NOT_ALLOWED_ON_RAILWAY:5432/fix_your_env_vars";
+    } else {
+        databaseUrl += databaseUrl.includes('?') ? '&sslmode=no-verify' : '?sslmode=no-verify';
+    }
 }
 
 // 5. Fallback for Production (Prevent Crash) but Log Loudly
