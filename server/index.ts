@@ -2400,11 +2400,7 @@ app.get('*', (req, res, next) => {
     }
 });
 
-// setupAdmin moved up
-
-
 // End of middleware and routes
-
 
 server.on('error', (e: any) => {
     if (e.code === 'EADDRINUSE') {
