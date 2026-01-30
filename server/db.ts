@@ -20,14 +20,27 @@ if (!databaseUrl && process.env.PGHOST) {
     databaseUrl = `postgresql://${process.env.PGUSER || 'postgres'}:${process.env.PGPASSWORD}@${process.env.PGHOST}:${process.env.PGPORT || '5432'}/${process.env.PGDATABASE}`;
 }
 
-// 2. Force SSL for Production (Ensures handshakes work)
+// 2. CRITICAL: Fix Protocol for Prisma
+// Prisma STRICTLY requires "postgresql://" or "postgres://". Some providers return "postgres://" which is fine, but others might leave it generic.
+if (databaseUrl && (process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production')) {
+    // If it starts with neither, assume it needs the prefix or fix it
+    if (!databaseUrl.startsWith('postgres://') && !databaseUrl.startsWith('postgresql://')) {
+        // Sometimes URL might come as "usuario:senha@host..." without protocol
+        databaseUrl = 'postgresql://' + databaseUrl;
+    }
+}
+
+// 3. Force SSL for Production (Ensures handshakes work)
 if (databaseUrl && !databaseUrl.includes('sslmode=') && (process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production')) {
     databaseUrl += databaseUrl.includes('?') ? '&sslmode=no-verify' : '?sslmode=no-verify';
 }
 
-// 3. IMPORTANT: Update global env so background tasks (like db push) use the SAME fixed URL
+// 4. IMPORTANT: Update global env so background tasks (like db push) use the SAME fixed URL
 if (databaseUrl) {
     process.env.DATABASE_URL = databaseUrl;
+    console.log(`[DB-Config] Database URL configured with protocol: ${databaseUrl.split(':')[0]}`);
+} else {
+    console.warn('[DB-Config] Warning: DATABASE_URL is undefined.');
 }
 
 export const prisma = new PrismaClient({
