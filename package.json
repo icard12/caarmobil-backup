@@ -5,9 +5,9 @@
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "concurrently \"npm run server\" \"vite\"",
+    "dev": "npx tsx switch-db.ts sqlite && npx prisma generate && concurrently \"npm run server\" \"vite\"",
     "electron:dev": "concurrently \"vite\" \"npm run server\" \"wait-on http://localhost:5173 && electron .\"",
-    "build": "npx prisma generate && vite build && npm run server:build",
+    "build": "npx tsx switch-db.ts postgres && npx prisma generate && vite build && npm run server:build",
     "build:full": "npm run build",
     "electron:build": "npm run build && electron-builder",
     "lint": "eslint .",

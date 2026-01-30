@@ -1022,7 +1022,7 @@ app.patch('/api/permission-requests/:id', async (req, res) => {
             };
 
             const actionLabel = labels[request.type] || request.type;
-            const targetName = details.name || details.clientName || details.deviceModel || request.targetId || '---';
+            const targetName = details?.name || details?.clientName || details?.deviceModel || request.targetId || '---';
             const requester = await prisma.user.findUnique({ where: { id: request.userId } });
 
             await createLog(
@@ -1753,7 +1753,11 @@ app.post('/api/login', async (req, res) => {
 
         res.json(userWithoutPassword);
     } catch (error) {
-        res.status(500).json({ error: 'Erro ao fazer login' });
+        console.error('FATAL LOGIN ERROR:', error);
+        res.status(500).json({
+            error: 'Erro ao fazer login',
+            details: error instanceof Error ? error.message : String(error)
+        });
     }
 });
 
