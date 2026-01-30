@@ -3,11 +3,6 @@ dist
 dist-server
 .env
 *.log
-node_modules
-dist
-dist-server
-.env
-*.log
 .DS_Store
 dist_electron
 *.db
@@ -17,3 +12,7 @@ uploads/*
 .npm-cache
 *.db-shm
 *.db-wal
+
+# Mobile
+android/
+ios/
