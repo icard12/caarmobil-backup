@@ -708,8 +708,9 @@ app.patch('/api/permission-requests/:id', async (req, res) => {
             return res.status(400).json({ error: 'Esta solicitação já foi processada anteriormente.' });
         }
 
+        const details = JSON.parse(request.details);
+
         if (status === 'approved') {
-            const details = JSON.parse(request.details);
 
             // Execute the requested action using a transaction for consistency
             await prisma.$transaction(async (tx) => {
@@ -1035,7 +1036,7 @@ app.patch('/api/permission-requests/:id', async (req, res) => {
             };
 
             const actionLabel = labels[request.type] || request.type;
-            const targetName = details.name || details.clientName || details.deviceModel || request.targetId || '---';
+            const targetName = details?.name || details?.clientName || details?.deviceModel || request.targetId || '---';
             const requester = await prisma.user.findUnique({ where: { id: request.userId } });
 
             await createLog(
@@ -2260,7 +2261,7 @@ app.get('*', (req, res, next) => {
 });
 
 // Start Server
-const server = httpServer.listen(Number(PORT), HOST, () => {
+const server = httpServer.listen(Number(PORT), HOST, async () => {
     console.log(`🚀 SERVER IS LIVE!`);
     console.log(`📍 URL: http://${HOST}:${PORT}`);
     console.log(`🏠 Mode: ${process.env.NODE_ENV || 'production'}`);
