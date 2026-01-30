@@ -25,6 +25,7 @@ const io = new Server(httpServer, {
     }
 });
 const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0'; // Essential for many cloud providers
 
 // Online users tracking
 const onlineUsers = new Map<string, { userId: string; userName: string; socketId: string; lastSeen: Date }>();
@@ -206,6 +207,7 @@ app.post('/api/test-ping', (req, res) => {
 
 // --- Status API ---
 app.get('/api/status', (req, res) => {
+    console.log(`[Healthcheck] Status check received from ${req.ip}`);
     res.json({ status: 'online', version: '1.0.1', timestamp: new Date() });
 });
 
@@ -2247,8 +2249,12 @@ app.get('*', (req, res, next) => {
 });
 
 // Start Server
-const server = httpServer.listen(PORT, async () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+const server = httpServer.listen(Number(PORT), HOST, async () => {
+    console.log(`🚀 Server is UP and running!`);
+    console.log(`📍 URL: http://${HOST}:${PORT}`);
+    console.log(`📂 Healthcheck: http://${HOST}:${PORT}/api/status`);
+    console.log(`🏠 Mode: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🏢 Platform: ${process.env.RAILWAY_ENVIRONMENT ? "Railway" : (process.env.RENDER ? "Render" : "Other")}`);
 
     await checkDatabaseHealth();
 
