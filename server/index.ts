@@ -64,7 +64,76 @@ app.get('/api/diagnostics', async (req, res) => {
 
 
 
+// Ensure default admin exists (Retry loop)
+const setupAdmin = async (retries = 5) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const adminExists = await prisma.user.findFirst({
+                where: { role: 'admin' }
+            });
+            if (!adminExists) {
+                const hashedPassword = await bcrypt.hash('admin', 10);
+                await prisma.user.create({
+                    data: {
+                        name: 'Administrador',
+                        email: 'caarmobilei@gmail.com',
+                        password: hashedPassword,
+                        role: 'admin',
+                        avatar: '',
+                        isActive: true
+                    }
+                });
+                console.log('✅ Default admin created successfully on attempt ' + (i + 1));
+            } else {
+                console.log('✅ Admin already exists.');
+            }
+            return; // Success
+        } catch (error) {
+            console.warn(`[Setup] Admin check attempt ${i + 1} failed. Database might not be ready yet.`);
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retry
+        }
+    }
+    console.error('❌ Failed to ensure default admin after multiple attempts.');
+};
+
 const httpServer = createServer(app);
+
+// --- START LISTENING IMMEDIATELY FOR HEALTHCHECKS ---
+const server = httpServer.listen(Number(PORT), HOST, () => {
+    console.log(`🚀 SERVER IS LIVE! (Fast Boot)`);
+    console.log(`📍 URL: http://${HOST}:${PORT}`);
+
+    // Background tasks after boot
+    setTimeout(async () => {
+        try {
+            await prisma.$queryRaw`SELECT 1`;
+            console.log('✅ Database connected (post-boot)');
+
+            // Background sync logic (moved from original listen callback)
+            if (process.env.RAILWAY_ENVIRONMENT || process.env.RENDER) {
+                const runDbPush = (attempt = 1) => {
+                    console.log(`[Database] Background schema sync (Attempt ${attempt})...`);
+                    import('child_process').then(({ exec }) => {
+                        exec('npx prisma db push --accept-data-loss', (err, stdout, stderr) => {
+                            if (stdout) console.log(`[Database Sync Output]: ${stdout}`);
+                            if (stderr) console.error(`[Database Sync Stderr]: ${stderr}`);
+                            if (err) {
+                                console.error(`[Database] Background sync error (Attempt ${attempt}):`, err.message);
+                                if (attempt < 3) setTimeout(() => runDbPush(attempt + 1), 10000);
+                            } else {
+                                console.log('[Database] Background sync complete.');
+                                setupAdmin();
+                            }
+                        });
+                    }).catch(e => console.error('[Database] Failed to import child_process'));
+                };
+                runDbPush();
+            }
+        } catch (e) {
+            console.error('❌ Database health check failed (post-boot):', e);
+        }
+    }, 1000);
+});
 
 const io = new Server(httpServer, {
     cors: {
@@ -2326,78 +2395,11 @@ app.get('*', (req, res, next) => {
     }
 });
 
-// Start Server
-const server = httpServer.listen(Number(PORT), HOST, async () => {
-    console.log(`🚀 SERVER IS LIVE!`);
-    console.log(`📍 URL: http://${HOST}:${PORT}`);
-    console.log(`🏠 Mode: ${process.env.NODE_ENV || 'production'}`);
+// setupAdmin moved up
 
-    // Run database health check and sync in background
-    setTimeout(async () => {
-        await checkDatabaseHealth();
 
-        // If we are in production and it's a fresh deploy, try a push in background
-        if (process.env.RAILWAY_ENVIRONMENT || process.env.RENDER) {
-            const runDbPush = (attempt = 1) => {
-                console.log(`[Database] Running background schema sync (Attempt ${attempt})...`);
-                import('child_process').then(({ exec }) => {
-                    exec('npx prisma db push --accept-data-loss', (err, stdout, stderr) => {
-                        if (stdout) console.log(`[Database Sync Output]: ${stdout}`);
-                        if (stderr) console.error(`[Database Sync Stderr]: ${stderr}`);
+// End of middleware and routes
 
-                        if (err) {
-                            console.error(`[Database] Background sync error (Attempt ${attempt}):`, err.message);
-                            if (attempt < 3) {
-                                console.log('[Database] Retrying sync in 10s...');
-                                setTimeout(() => runDbPush(attempt + 1), 10000);
-                            }
-                        } else {
-                            console.log('[Database] Background sync complete. Tables verified.');
-                            setupAdmin();
-                        }
-                    });
-                }).catch(e => console.error('[Database] Failed to import child_process'));
-            };
-            runDbPush();
-        } else {
-            setupAdmin();
-        }
-    }, 1000);
-
-    // Ensure default admin exists (Retry loop)
-    const setupAdmin = async (retries = 5) => {
-        for (let i = 0; i < retries; i++) {
-            try {
-                const adminExists = await prisma.user.findFirst({
-                    where: { role: 'admin' }
-                });
-                if (!adminExists) {
-                    const hashedPassword = await bcrypt.hash('admin', 10);
-                    await prisma.user.create({
-                        data: {
-                            name: 'Administrador',
-                            email: 'caarmobilei@gmail.com',
-                            password: hashedPassword,
-                            role: 'admin',
-                            avatar: '',
-                            isActive: true
-                        }
-                    });
-                    console.log('✅ Default admin created successfully on attempt ' + (i + 1));
-                } else {
-                    console.log('✅ Admin already exists.');
-                }
-                return; // Success
-            } catch (error) {
-                console.warn(`[Setup] Admin check attempt ${i + 1} failed. Database might not be ready yet.`);
-                await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds before retry
-            }
-        }
-        console.error('❌ Failed to ensure default admin after multiple attempts.');
-    };
-
-    // Run setup is now called as part of DB sync callback
-});
 
 server.on('error', (e: any) => {
     if (e.code === 'EADDRINUSE') {
