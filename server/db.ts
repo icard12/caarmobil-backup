@@ -14,12 +14,13 @@ if (fs.existsSync(envPath)) {
 let databaseUrl = process.env.DATABASE_URL;
 
 // 1. Search for ANY environment variable that looks like a Postgres URL
-// (Sometimes Railway/Render uses keys like POSTGRES_URL, DATABASE_PUBLIC_URL, etc.)
+// (Railway provides DATABASE_URL automatically when a Postgres plugin is added)
 if (!databaseUrl) {
-    for (const [key, value] of Object.entries(process.env)) {
-        if (value && (value.startsWith('postgres://') || value.startsWith('postgresql://'))) {
-            console.log(`[DB-Config] Auto-discovered database URL in variable: ${key}`);
-            databaseUrl = value;
+    const pgVars = ['DATABASE_URL', 'POSTGRES_URL', 'DATABASE_PUBLIC_URL', 'PGURL'];
+    for (const key of pgVars) {
+        if (process.env[key] && (process.env[key]?.startsWith('postgres://') || process.env[key]?.startsWith('postgresql://'))) {
+            console.log(`[DB-Config] Discovered database URL in: ${key}`);
+            databaseUrl = process.env[key];
             break;
         }
     }
@@ -31,38 +32,38 @@ if (!databaseUrl && process.env.PGHOST) {
 }
 
 // 3. CRITICAL: Fix Protocol for Prisma
-if (databaseUrl && (process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production')) {
+if (databaseUrl && (process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.NODE_ENV === 'production')) {
     if (!databaseUrl.startsWith('postgres://') && !databaseUrl.startsWith('postgresql://')) {
         databaseUrl = 'postgresql://' + databaseUrl;
     }
 }
 
-// 4. Force SSL for Production
-if (databaseUrl && !databaseUrl.includes('sslmode=') && (process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production')) {
-    // SECURITY: Prevent connecting to localhost in production (common configuration error)
-    if (databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')) {
-        console.error('❌ [DB-Config] CRITICAL: Attempted to use localhost in production/Railway!');
-        databaseUrl = "postgresql://ERROR_LOCALHOST_NOT_ALLOWED_ON_RAILWAY:5432/fix_your_env_vars";
-    } else {
+// 4. Force SSL for Production (Required by most cloud DBs like Railway/Supabase)
+if (databaseUrl && (process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.NODE_ENV === 'production')) {
+    if (!databaseUrl.includes('sslmode=')) {
         databaseUrl += databaseUrl.includes('?') ? '&sslmode=no-verify' : '?sslmode=no-verify';
+    }
+
+    // SECURITY: Prevent connecting to localhost in production/Railway
+    if (databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')) {
+        console.error('❌ [DB-Config] ERROR: Detected localhost URL in production environment!');
+        // We will NOT overwrite it here to allow local production testing IF explicitly intended,
+        // but Railway should never provide localhost.
     }
 }
 
-// 5. Fallback for Production (Prevent Crash) but Log Loudly
-if (!databaseUrl && (process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV === 'production')) {
-    console.error('❌ [DB-Config] CRITICAL: No DATABASE_URL found! Please add PostgreSQL in Railway.');
-    console.warn('[DB-Config] Using dummy URL to keep server alive (DB features will fail).');
-    databaseUrl = "postgresql://MISSING_DATABASE_URL_IN_RAILWAY_SETTINGS:5432/configure_me";
+// 5. Fallback for Production
+if (!databaseUrl && (process.env.RAILWAY_ENVIRONMENT || process.env.RENDER || process.env.NODE_ENV === 'production')) {
+    console.error('❌ [DB-Config] CRITICAL: No DATABASE_URL found!');
 }
 
-// 6. Update global env
+// 6. Update global env for Prisma Client
 if (databaseUrl) {
     process.env.DATABASE_URL = databaseUrl;
-    // Log masked URL for debugging
     const masked = databaseUrl.replace(/:([^:@]+)@/, ':****@');
-    console.log(`[DB-Config] Final Connection String: ${masked}`);
+    console.log(`[DB-Config] Active URL: ${masked}`);
 } else {
-    console.warn('[DB-Config] Warning: DATABASE_URL is undefined (Using SQLite local fallback if not in prod).');
+    console.warn('[DB-Config] No DATABASE_URL found, falling back to local SQLite.');
 }
 
 export const prisma = new PrismaClient({
