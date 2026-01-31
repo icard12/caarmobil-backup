@@ -43,7 +43,12 @@ if (databaseUrl && !databaseUrl.includes('sslmode=') && (process.env.RAILWAY_ENV
 // 4. IMPORTANT: Update global env so background tasks (like db push) use the SAME fixed URL
 if (databaseUrl) {
     process.env.DATABASE_URL = databaseUrl;
-    console.log(`[DB-Config] Database URL configured with protocol: ${databaseUrl.split(':')[0]}`);
+
+    // Censored URL for logging
+    const protocol = databaseUrl.split('://')[0];
+    const afterProtocol = databaseUrl.split('://')[1] || '';
+    const hostPart = afterProtocol.split('@')[1] || afterProtocol.split('/')[0];
+    console.log(`[DB-Config] Using ${process.env.DATABASE_URL === databaseUrl ? 'provided' : 'reconstructed'} URL. Protocol: ${protocol}, Host: ${hostPart}`);
 } else {
     console.warn('[DB-Config] Warning: DATABASE_URL is undefined.');
 
