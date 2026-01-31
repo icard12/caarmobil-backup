@@ -18,7 +18,7 @@
 Certifique-se de que está na pasta do projeto:
 
 ```bash
-cd "c:\Users\CALL MOBILE\Pictures\CAAR-MOBIL-2026-main\CAAR-MOBIL-2026-main"
+cd "C:\Users\Elias Laquimane\Downloads\Compressed\caarmobil-main\caarmobil-main"
 ```
 
 ### 2️⃣ **Criar Conta no Railway**
@@ -32,7 +32,7 @@ cd "c:\Users\CALL MOBILE\Pictures\CAAR-MOBIL-2026-main\CAAR-MOBIL-2026-main"
 1. No Railway, clique em **"+ New"**
 2. Selecione **"Database"** → **"PostgreSQL"**
 3. Aguarde a criação (leva ~30 segundos)
-4. Copie a **DATABASE_URL** que aparecerá nas variáveis
+4. Copie a **DATABASE_URL** que aparecerá nas variáveis: `postgresql://postgres:cOyWbOcalSpircCieMVIhifUgXStnMUe@postgres.railway.internal:5432/railway`
 
 ### 4️⃣ **Deploy do Projeto**
 
