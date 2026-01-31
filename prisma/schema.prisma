@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "linux-musl", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id           String          @id @default(uuid())
+  name         String
+  category     String
+  price        Float
+  stock        Int
+  minStock     Int             @default(0)
+  status       String
+  image_url    String?
+  created_at   DateTime        @default(now())
+  updated_at   DateTime        @updatedAt
+  isDeleted    Boolean         @default(false)
+  costPrice    Float           @default(0)
+  serviceParts ServicePart[]
+  movements    StockMovement[]
+}
+
+model Transaction {
+  id            String   @id @default(uuid())
+  type          String
+  amount        Float
+  description   String
+  category      String   @default("Diversos")
+  status        String   @default("paid")
+  dueDate       DateTime @default(now())
+  paymentMethod String?
+  date          DateTime @default(now())
+  clientName    String?
+  costAmount    Float    @default(0)
+}
+
+model ServiceOrder {
+  id           String        @id @default(uuid())
+  clientName   String
+  deviceModel  String
+  description  String
+  status       String
+  price        Float
+  imageUrl     String?
+  frontImageUrl String?
+  backImageUrl  String?
+  created_at   DateTime      @default(now())
+  updated_at   DateTime      @updatedAt
+  delivered_at DateTime?
+  clientPhone  String?
+  cost         Float         @default(0)
+  parts        ServicePart[]
+}
+
+model User {
+  id               String          @id @default(uuid())
+  name             String
+  email            String          @unique
+  password         String
+  role             String
+  avatar           String?
+  isActive         Boolean         @default(true)
+  isDeleted        Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  movements        StockMovement[]
+  logs             SystemLog[]
+  permissionRequests PermissionRequest[]
+}
+
+model ServicePart {
+  id             String       @id @default(uuid())
+  serviceOrderId String
+  productId      String
+  quantity       Int
+  unitPrice      Float
+  unitCost       Float
+  product        Product      @relation(fields: [productId], references: [id])
+  serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id])
+}
+
+model StockMovement {
+  id        String   @id @default(uuid())
+  productId String
+  userId    String
+  type      String
+  quantity  Int
+  reason    String?
+  date      DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model PettyCash {
+  id          String   @id @default(uuid())
+  type        String
+  amount      Float
+  description String
+  date        DateTime @default(now())
+}
+
+model SystemLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  category  String
+  details   String
+  ip        String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model PermissionRequest {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  type      String   // "CREATE_PRODUCT", "UPDATE_PRODUCT", "DELETE_PRODUCT"
+  details   String   // JSON string with product data
+  targetId  String?  // ID of the product being edited/deleted
+  status    String   @default("pending") // "pending", "approved", "rejected"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

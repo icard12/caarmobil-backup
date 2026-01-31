@@ -1,0 +1,18 @@
+node_modules
+dist
+dist-server
+.env
+*.log
+.DS_Store
+dist_electron
+*.db
+*.db-journal
+uploads/*
+!uploads/.gitkeep
+.npm-cache
+*.db-shm
+*.db-wal
+
+# Mobile
+android/
+ios/

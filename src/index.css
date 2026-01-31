@@ -1,0 +1,387 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-orange: #FF4700;
+  --bg-canvas: #F1F5F9;
+  /* Light slate background */
+  --bg-panel: #FFFFFF;
+  /* White */
+  --bg-sidebar: #FFFFFF;
+  /* White */
+  --text-main: #0F172A;
+  /* Slate 900 */
+  --text-muted: #64748B;
+  /* Slate 500 */
+  --border-subtle: #E2E8F0;
+  /* Slate 200 */
+}
+
+.dark {
+  --bg-canvas: #0B1114;
+  --bg-panel: #131D24;
+  --bg-sidebar: #0B1114;
+  --text-main: #F8FAFC;
+  --text-muted: #94A3B8;
+  --border-subtle: #1E293B;
+}
+
+html,
+body {
+  overflow-x: hidden;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-[var(--bg-canvas)] text-[var(--text-main)] antialiased overflow-x-hidden;
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.02em;
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-top: env(safe-area-inset-top);
+  -webkit-overflow-scrolling: touch;
+}
+
+@layer components {
+
+  /* Dark SaaS Aesthetics */
+  .shadow-soft {
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .shadow-pro {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.03),
+      0 2px 4px rgba(0, 0, 0, 0.1),
+      0 12px 24px -4px rgba(0, 0, 0, 0.4);
+  }
+
+  .shadow-premium {
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 20px 40px -10px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Refined Glassmorphism (Command Center) */
+  .glass-modern {
+    @apply bg-[#131D24]/80 backdrop-blur-[12px] border border-white/5;
+    box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  }
+
+  .glass-dark-modern {
+    @apply bg-[#0B1114]/90 backdrop-blur-xl border border-white/5 shadow-2xl;
+  }
+
+  /* Orange Glow */
+  .shadow-glow-orange {
+    box-shadow: 0 0 20px rgba(255, 71, 0, 0.15);
+  }
+
+  /* Interaction Elements */
+  .btn-modern {
+    @apply relative overflow-hidden transition-all duration-300 active:scale-95;
+  }
+
+  /* Command Center Texture */
+  .bg-command {
+    background-color: #121B21;
+    background-image:
+      radial-gradient(at 100% 0%, rgba(255, 71, 0, 0.05) 0, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(30, 41, 59, 0.05) 0, transparent 50%);
+  }
+
+  .table-row-hover {
+    @apply transition-all duration-300 hover:bg-white/[0.04] hover:translate-x-1;
+  }
+}
+
+::selection {
+  @apply bg-[#FF4700] text-white;
+}
+
+@layer utilities {
+  .animate-slide-up {
+    animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-zoom-fade {
+    animation: zoomFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-shake {
+    animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+  }
+
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .delay-500 {
+    animation-delay: 500ms;
+  }
+
+  .fill-mode-forwards {
+    animation-fill-mode: forwards;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zoomFade {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes pulseSubtle {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.85;
+    transform: scale(0.98);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes shake {
+
+  10%,
+  90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+
+  20%,
+  80% {
+    transform: translate3d(2px, 0, 0);
+  }
+
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+
+  40%,
+  60% {
+    transform: translate3d(4px, 0, 0);
+  }
+}
+
+@keyframes hologram {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+    filter: blur(10px);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1.05) translateY(-5px);
+    filter: blur(0px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-hologram {
+  animation: hologram 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-spin-slow {
+  animation: spin 3s linear infinite;
+}
+
+/* Scrollbar Refinement */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-200 rounded-full hover:bg-gray-300 transition-colors;
+}
+
+/* Sidebar Specific Transitions */
+.sidebar-section-exit {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in, opacity 0.2s ease-in;
+}
+
+.sidebar-section-enter {
+  max-height: 1000px;
+  opacity: 1;
+  transition: max-height 0.5s ease-out, opacity 0.4s ease-out;
+}
+
+/* Responsive Scale Utilities */
+@layer utilities {
+  .mobile-touch-target {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Mobile Specific Optimizations */
+@media (max-width: 640px) {
+  .glass-modern {
+    @apply backdrop-blur-[8px];
+  }
+
+  h1 {
+    @apply text-xl;
+  }
+
+  h2 {
+    @apply text-base;
+  }
+
+  .table-container {
+    @apply -mx-4 px-4 overflow-x-auto hide-scrollbar;
+  }
+
+  /* Prevent body scroll when mobile menu is open */
+  body.menu-open {
+    @apply overflow-hidden;
+  }
+
+  /* Mobile margin adjustments */
+  main {
+    @apply pt-20 px-3;
+  }
+
+  /* Improved card padding for mobile */
+  .card-premium {
+    @apply p-4 rounded-2xl;
+  }
+
+  /* Mobile-friendly spacing */
+  .mobile-stack {
+    @apply flex-col gap-4;
+  }
+}
+
+/* Touch targets for mobile */
+@media (pointer: coarse) {
+
+  button,
+  a,
+  input,
+  select {
+    @apply min-h-[48px];
+  }
+
+  .touch-target-large {
+    @apply min-h-[56px] min-w-[56px];
+  }
+}
+
+/* Safe area insets for modern mobile displays */
+.safe-p-b {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* momentum scrolling for better Android/iOS feel */
+.overflow-touch {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Better focus for Android */
+input:focus,
+button:focus-visible {
+  @apply ring-4 ring-[#FF4700]/20;
+}
