@@ -300,21 +300,26 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
         setConfirmQuickSell(null);
 
         if (!isAdmin) {
-            try {
-                await api.permissionRequests.create({
-                    type: 'UPDATE_PRODUCT',
-                    details: {
-                        ...product,
-                        stock: product.stock - 1,
-                        _reason: t('quickSell')
-                    },
-                    targetId: product.id
-                });
-                addNotification(t('requestSent') || 'Solicitação de venda enviada ao administrador', 'info');
-                return;
-            } catch (error) {
-                addNotification(t('errorSendingRequest') || 'Erro ao enviar solicitação', 'error');
-                return;
+            // Check if it's a quick sell (decreasing stock by 1)
+            // Normal users and managers are allowed to SELL without admin permission
+            // but manual adjustments still require requests.
+            if (!isQuickSell) {
+                try {
+                    await api.permissionRequests.create({
+                        type: 'UPDATE_PRODUCT',
+                        details: {
+                            ...product,
+                            stock: product.stock - 1,
+                            _reason: t('quickSell')
+                        },
+                        targetId: product.id
+                    });
+                    addNotification(t('requestSent') || 'Solicitação de venda enviada ao administrador', 'info');
+                    return;
+                } catch (error) {
+                    addNotification(t('errorSendingRequest') || 'Erro ao enviar solicitação', 'error');
+                    return;
+                }
             }
         }
 
@@ -867,6 +872,17 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
             <div className="relative animate-zoom-fade delay-200">
                 <DataTable title={t('assetRegistry')} columns={columns} data={filteredProducts} />
                 <div className="absolute inset-0 pointer-events-none border border-white/5 rounded-3xl" />
+            </div>
+
+            <div className="flex justify-end pt-4">
+                <div className="bg-[var(--bg-canvas)]/50 px-6 py-3 rounded-2xl border border-[var(--border-subtle)]">
+                    <span className="text-[10px] lg:text-xs font-black text-[var(--text-muted)] uppercase tracking-wider mr-2">
+                        Total units available:
+                    </span>
+                    <span className="text-base lg:text-xl font-black text-[#FF4700]">
+                        {localProducts.reduce((sum, p) => sum + (p.stock || 0), 0)}
+                    </span>
+                </div>
             </div>
         </div>
     );
