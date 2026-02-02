@@ -601,6 +601,106 @@ app.patch('/api/products/:id', async (req, res) => {
 
 app.post('/api/products/adjust-stock', async (req, res) => {
     try {
+        const { productId, userId, type, quantity, reason, isFinancial } = req.body;
+
+        // Validation
+        if (!productId || !userId || !type || !quantity) {
+            return res.status(400).json({ error: 'Dados incompletos para ajuste' });
+        }
+
+        const numericQty = parseInt(quantity);
+        if (isNaN(numericQty) || numericQty <= 0) {
+            return res.status(400).json({ error: 'Quantidade inválida' });
+        }
+
+        const result = await prisma.$transaction(async (tx) => {
+            const product = await tx.product.findUnique({ where: { id: productId } });
+            if (!product) throw new Error('Produto não encontrado');
+
+            const newStock = type === 'entry'
+                ? product.stock + numericQty
+                : product.stock - numericQty;
+
+            if (newStock < 0) throw new Error('Estoque insuficiente para esta saída');
+
+            // 1. Update product stock
+            const updatedProduct = await tx.product.update({
+                where: { id: productId },
+                data: {
+                    stock: newStock,
+                    status: newStock > 0 ? 'active' : 'out_of_stock'
+                }
+            });
+
+            // 2. Create Stock Movement
+            await tx.stockMovement.create({
+                data: {
+                    productId,
+                    userId,
+                    type,
+                    quantity: numericQty,
+                    reason: reason || (type === 'entry' ? 'Ajuste Manual (+)' : 'Ajuste Manual (-)'),
+                    date: new Date()
+                }
+            });
+
+            // 3. Conditional Financial Transaction
+            // Only strictly if isFinancial is true (e.g., Quick Sell uses this with isFinancial=true)
+            // Manual adjustments usually send isFinancial=false or undefined
+            if (isFinancial) {
+                if (type === 'exit') {
+                    // Sale (Quick Sell)
+                    await tx.transaction.create({
+                        data: {
+                            type: 'income',
+                            amount: product.price * numericQty,
+                            costAmount: product.costPrice * numericQty,
+                            description: `Venda Rápida: ${product.name} (${numericQty} un)`,
+                            category: 'Venda de Produto',
+                            status: 'paid',
+                            date: new Date(),
+                            dueDate: new Date()
+                        }
+                    });
+                } else {
+                    // Purchase (Restock with cost)
+                    await tx.transaction.create({
+                        data: {
+                            type: 'expense',
+                            amount: product.costPrice * numericQty,
+                            description: `Reposição de Estoque: ${product.name} (${numericQty} un)`,
+                            category: 'Compra de Estoque',
+                            status: 'paid',
+                            date: new Date(),
+                            dueDate: new Date()
+                        }
+                    });
+                }
+            }
+
+            return updatedProduct;
+        });
+
+        const actor = await prisma.user.findUnique({ where: { id: userId } });
+        await createLog(
+            userId,
+            'STOCK_ADJUST',
+            'INVENTORY',
+            `Ajuste de estoque (${type === 'entry' ? '+' : '-'}${numericQty}) em ${result.name} - Motivo: ${reason}`
+        );
+
+        invalidateAnalyticsCache();
+        io.emit('data-updated', { type: 'products', action: 'update' });
+        res.json(result);
+
+    } catch (error) {
+        console.error('Error adjusting stock:', error);
+        res.status(500).json({ error: error instanceof Error ? error.message : 'Erro ao ajustar estoque' });
+    }
+});
+
+app.post('/api/products/adjust-stock', async (req, res) => {
+    try {
         const requesterId = req.headers['x-user-id'] as string;
         const { productId, userId, type, quantity, reason, isFinancial } = req.body;
 
@@ -949,7 +1049,10 @@ app.patch('/api/permission-requests/:id', async (req, res) => {
 
                             // Side effect: Financial record for sales (exit) or purchases (entry if reason suggests)
                             const isQuickSell = details._reason?.toLowerCase().includes('venda') || details._reason?.toLowerCase().includes('sell');
-                            if (type === 'exit' || isQuickSell) {
+
+                            // FIXED: Only create income transaction if it is EXPLICITLY a sale (Quick Sell)
+                            // Manual adjustments (even exits) should NOT create financial records or count as sales
+                            if (type === 'exit' && isQuickSell) {
                                 await tx.transaction.create({
                                     data: {
                                         type: 'income',
@@ -962,7 +1065,7 @@ app.patch('/api/permission-requests/:id', async (req, res) => {
                                         dueDate: new Date()
                                     }
                                 });
-                            } else if (type === 'entry') {
+                            } else if (type === 'entry' && details.isFinancial) { // Only if explicitly marked financial for entry
                                 // For entries we might want to record investment
                                 await tx.transaction.create({
                                     data: {
