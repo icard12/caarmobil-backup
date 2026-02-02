@@ -76,22 +76,23 @@ async function getDaysSinceLastMovement(productId: string): Promise<number> {
 /**
  * Calculate total sales (exits) for a product
  */
-const exits = await prisma.stockMovement.findMany({
-    where: {
-        productId,
-        type: 'exit',
-        // Exclude manual adjustments from sales count (Fixed)
-        NOT: {
-            OR: [
-                { reason: { contains: 'Ajuste' } },
-                { reason: { contains: 'Manual' } },
-                { reason: { contains: 'Correction' } }
-            ]
+async function getTotalSales(productId: string): Promise<number> {
+    const exits = await prisma.stockMovement.findMany({
+        where: {
+            productId,
+            type: 'exit',
+            // Exclude manual adjustments from sales count (Fixed)
+            NOT: {
+                OR: [
+                    { reason: { contains: 'Ajuste' } },
+                    { reason: { contains: 'Manual' } },
+                    { reason: { contains: 'Correction' } }
+                ]
+            }
         }
-    }
-});
+    });
 
-return exits.reduce((sum, movement) => sum + movement.quantity, 0);
+    return exits.reduce((sum, movement) => sum + movement.quantity, 0);
 }
 
 /**
