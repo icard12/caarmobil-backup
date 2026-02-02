@@ -14,7 +14,7 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "server": "tsx --watch server/index.ts",
-    "server:build": "esbuild server/index.ts --bundle --platform=node --target=node22 --outfile=server.js --external:prisma --external:@prisma/client --external:fsevents --log-level=info",
+    "server:build": "esbuild server/index.ts --bundle --platform=node --format=esm --target=node22 --outfile=server.js --external:prisma --external:@prisma/client --external:fsevents --log-level=info",
     "start": "node server.js",
     "mobile:sync": "npm run build && npx cap sync",
     "mobile:open:android": "npx cap open android",
