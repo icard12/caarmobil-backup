@@ -68,6 +68,7 @@ export default function ServiceOrders() {
     }, [showForm]);
 
     const handleUpdateStatus = async (id: string, status: string) => {
+        /* 
         if (!isAdmin) {
             try {
                 await api.permissionRequests.create({
@@ -82,6 +83,7 @@ export default function ServiceOrders() {
                 return;
             }
         }
+        */
         try {
             await api.services.update(id, { status });
             await refreshData();
@@ -132,6 +134,7 @@ export default function ServiceOrders() {
             const servicePrice = parseFloat(formData.price) || 0;
             const serviceParts = selectedParts.map(p => ({ productId: p.id, quantity: p.qty }));
 
+            /*
             if (!isAdmin) {
                 await api.permissionRequests.create({
                     type: editingId ? 'UPDATE_SERVICE' : 'CREATE_SERVICE',
@@ -149,6 +152,7 @@ export default function ServiceOrders() {
                 setSelectedParts([]);
                 return;
             }
+            */
 
             if (editingId) {
                 await api.services.update(editingId, {

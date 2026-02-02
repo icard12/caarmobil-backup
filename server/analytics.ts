@@ -76,15 +76,22 @@ async function getDaysSinceLastMovement(productId: string): Promise<number> {
 /**
  * Calculate total sales (exits) for a product
  */
-async function getTotalSales(productId: string): Promise<number> {
-    const exits = await prisma.stockMovement.findMany({
-        where: {
-            productId,
-            type: 'exit'
+const exits = await prisma.stockMovement.findMany({
+    where: {
+        productId,
+        type: 'exit',
+        // Exclude manual adjustments from sales count (Fixed)
+        NOT: {
+            OR: [
+                { reason: { contains: 'Ajuste' } },
+                { reason: { contains: 'Manual' } },
+                { reason: { contains: 'Correction' } }
+            ]
         }
-    });
+    }
+});
 
-    return exits.reduce((sum, movement) => sum + movement.quantity, 0);
+return exits.reduce((sum, movement) => sum + movement.quantity, 0);
 }
 
 /**
@@ -94,7 +101,22 @@ async function getSalesVelocity(productId: string): Promise<number> {
     try {
         const product = await prisma.product.findUnique({
             where: { id: productId },
-            include: { movements: { where: { type: 'exit' }, orderBy: { date: 'asc' } } }
+            include: {
+                movements: {
+                    where: {
+                        type: 'exit',
+                        // Exclude manual adjustments
+                        NOT: {
+                            OR: [
+                                { reason: { contains: 'Ajuste' } },
+                                { reason: { contains: 'Manual' } },
+                                { reason: { contains: 'Correction' } }
+                            ]
+                        }
+                    },
+                    orderBy: { date: 'asc' }
+                }
+            }
         });
 
         if (!product || product.movements.length === 0) return 0;
