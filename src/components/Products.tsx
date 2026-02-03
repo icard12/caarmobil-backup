@@ -165,8 +165,6 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
             image_url: formData.image_url,
         };
 
-        // Admin check removed to allow direct product creation/update by all users
-        /*
         if (!isAdmin) {
             try {
                 await api.permissionRequests.create({
@@ -185,7 +183,6 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
                 return;
             }
         }
-        */
 
         if (isSaving) return;
         setIsSaving(true);
@@ -263,8 +260,6 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
         const id = confirmToDelete;
         setConfirmToDelete(null);
 
-        // Admin check removed to allow direct product deletion by all users
-        /*
         if (!isAdmin) {
             try {
                 await api.permissionRequests.create({
@@ -279,7 +274,6 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
                 return;
             }
         }
-        */
 
         try {
             await api.products.delete([id]);
@@ -583,7 +577,7 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
 
                             <div className="flex items-center justify-between mb-1 sm:mb-4">
                                 <h2 className="text-sm sm:text-lg font-bold text-[var(--text-main)] tracking-tight">
-                                    {isEditing ? t('edit') : 'Novo'}
+                                    {isAdmin ? (isEditing ? t('edit') : 'Novo') : (isEditing ? 'Solicitar Edição' : 'Solicitar Novo')}
                                 </h2>
                                 <button onClick={() => setShowForm(false)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors p-1">
                                     <X className="w-4 h-4" />
@@ -688,7 +682,7 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
                                     ) : (
                                         <Plus className="w-3 h-3" />
                                     )}
-                                    <span>{isEditing ? t('save') : t('add')}</span>
+                                    <span>{isAdmin ? (isEditing ? t('save') : t('add')) : 'Enviar Solicitação'}</span>
                                 </button>
                             </div>
                         </motion.div>

@@ -404,10 +404,11 @@ app.get('/api/products', async (req, res) => {
 
 app.post('/api/products', async (req, res) => {
     try {
-        const creatorId = req.headers['x-user-id'] as string;
-        if (!creatorId) return res.status(401).json({ error: 'Usuário não identificado' });
-
-        // Removed admin check to allow non-admins to add products directly
+        const requesterId = req.headers['x-user-id'] as string;
+        const requester = await prisma.user.findUnique({ where: { id: requesterId || '' } });
+        if (requester?.role !== 'admin') {
+            return res.status(403).json({ error: 'Acesso negado: Somente administradores podem cadastrar produtos diretamente' });
+        }
 
         const { name, price, costPrice, stock, ...rest } = req.body;
         const stockQty = parseInt(stock) || 0;
@@ -487,10 +488,10 @@ app.post('/api/products', async (req, res) => {
         });
 
         // Create log outside transaction
-        if (creatorId) {
+        if (requesterId) {
             const totalValue = product.price * product.stock;
             await createLog(
-                creatorId,
+                requesterId,
                 'PRODUCT_CREATE',
                 'INVENTORY',
                 `Cadastrou: ${product.name} | Inicial: ${product.stock} un | Valor: MT ${totalValue.toFixed(2)}`
@@ -509,10 +510,11 @@ app.post('/api/products', async (req, res) => {
 app.patch('/api/products/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        const updaterId = req.headers['x-user-id'] as string;
-        if (!updaterId) return res.status(401).json({ error: 'Usuário não identificado' });
-
-        // Removed admin check to allow non-admins to edit products
+        const requesterId = req.headers['x-user-id'] as string;
+        const requester = await prisma.user.findUnique({ where: { id: requesterId || '' } });
+        if (requester?.role !== 'admin') {
+            return res.status(403).json({ error: 'Acesso negado: Somente administradores podem editar produtos diretamente' });
+        }
 
         const { name, price, costPrice, stock, minStock, ...rest } = req.body;
 
@@ -575,9 +577,9 @@ app.patch('/api/products/:id', async (req, res) => {
             return { product: updatedProduct, oldStock, userName };
         });
 
-        if (updaterId) {
+        if (requesterId) {
             await createLog(
-                updaterId,
+                requesterId,
                 'PRODUCT_UPDATE',
                 'INVENTORY',
                 `O usuário ${result.userName} editou o produto ${result.product.name}. Estoque alterado de ${result.oldStock} para ${result.product.stock} unidades.`
