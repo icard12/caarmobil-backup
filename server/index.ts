@@ -322,7 +322,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Serve uploaded files statically
 app.use('/uploads', express.static(uploadDir));
 
@@ -450,7 +451,7 @@ app.post('/api/products', async (req, res) => {
                 const totalValue = newProduct.price * newProduct.stock;
 
                 // Get a valid fallback userId if creatorId is missing or invalid
-                let validUserId = creatorId;
+                let validUserId = requesterId;
                 if (!validUserId || validUserId.length < 10) {
                     const fallbackUser = await tx.user.findFirst({ where: { role: 'admin' } });
                     validUserId = fallbackUser?.id || '';
@@ -549,7 +550,7 @@ app.patch('/api/products/:id', async (req, res) => {
                 const totalValue = newPrice * qty;
 
                 // Get a valid fallback userId
-                let validUserId = updaterId;
+                let validUserId = requesterId;
                 if (!validUserId || validUserId.length < 10) {
                     const fallbackUser = await tx.user.findFirst({ where: { role: 'admin' } });
                     validUserId = fallbackUser?.id || '';
@@ -570,7 +571,7 @@ app.patch('/api/products/:id', async (req, res) => {
                 // Stock adjustments should be done via /adjust-stock for financial tracking.
             }
 
-            const user = updaterId ? await tx.user.findUnique({ where: { id: updaterId } }) : null;
+            const user = requesterId ? await tx.user.findUnique({ where: { id: requesterId } }) : null;
             const userName = user ? user.name : 'Sistema/Admin';
             const oldStock = currentProduct.stock;
 

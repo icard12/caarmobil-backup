@@ -67896,7 +67896,8 @@ var storage = import_multer.default.diskStorage({
 });
 var upload = (0, import_multer.default)({ storage });
 app.use((0, import_cors.default)());
-app.use(import_express.default.json());
+app.use(import_express.default.json({ limit: "50mb" }));
+app.use(import_express.default.urlencoded({ limit: "50mb", extended: true }));
 app.use("/uploads", import_express.default.static(uploadDir));
 var distDir = path2.join(_projectRoot, "dist");
 if (fs2.existsSync(distDir)) {
@@ -67992,7 +67993,7 @@ app.post("/api/products", async (req, res) => {
       });
       if (newProduct.stock > 0) {
         const totalValue = newProduct.price * newProduct.stock;
-        let validUserId = creatorId;
+        let validUserId = requesterId;
         if (!validUserId || validUserId.length < 10) {
           const fallbackUser = await tx.user.findFirst({ where: { role: "admin" } });
           validUserId = fallbackUser?.id || "";
@@ -68072,7 +68073,7 @@ app.patch("/api/products/:id", async (req, res) => {
       if (stockDiff !== 0) {
         const qty = Math.abs(stockDiff);
         const totalValue = newPrice * qty;
-        let validUserId = updaterId;
+        let validUserId = requesterId;
         if (!validUserId || validUserId.length < 10) {
           const fallbackUser = await tx.user.findFirst({ where: { role: "admin" } });
           validUserId = fallbackUser?.id || "";
@@ -68088,7 +68089,7 @@ app.patch("/api/products/:id", async (req, res) => {
           }
         });
       }
-      const user = updaterId ? await tx.user.findUnique({ where: { id: updaterId } }) : null;
+      const user = requesterId ? await tx.user.findUnique({ where: { id: requesterId } }) : null;
       const userName = user ? user.name : "Sistema/Admin";
       const oldStock = currentProduct.stock;
       return { product: updatedProduct, oldStock, userName };
@@ -68836,7 +68837,7 @@ app.get("/api/services", async (req, res) => {
 app.post("/api/services", async (req, res) => {
   try {
     const { clientName, clientPhone, deviceModel, description, status, price, imageUrl, frontImageUrl, backImageUrl, parts } = req.body;
-    const creatorId2 = req.headers["x-user-id"];
+    const creatorId = req.headers["x-user-id"];
     const result = await prisma.$transaction(async (tx) => {
       let totalPartsCost = 0;
       const servicePartsData = [];
@@ -68859,7 +68860,7 @@ app.post("/api/services", async (req, res) => {
           await tx.stockMovement.create({
             data: {
               productId: part.productId,
-              userId: creatorId2 || (await tx.user.findFirst({ where: { role: "admin" } }))?.id || "",
+              userId: creatorId || (await tx.user.findFirst({ where: { role: "admin" } }))?.id || "",
               type: "exit",
               quantity: part.quantity,
               reason: `Uso em Servi\xE7o: ${deviceModel} (${clientName})`
@@ -68911,9 +68912,9 @@ app.post("/api/services", async (req, res) => {
       }
       return serviceOrder;
     });
-    if (creatorId2) {
+    if (creatorId) {
       await createLog(
-        creatorId2,
+        creatorId,
         "SERVICE_CREATE",
         "SERVICES",
         `Criou servi\xE7o: ${result.deviceModel} para ${result.clientName} | Valor: MT ${result.price.toFixed(2)}`
@@ -68932,7 +68933,7 @@ app.patch("/api/services/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { status, clientName, clientPhone, deviceModel, description, price, imageUrl, frontImageUrl, backImageUrl } = req.body;
-    const updaterId2 = req.headers["x-user-id"];
+    const updaterId = req.headers["x-user-id"];
     const result = await prisma.$transaction(async (tx) => {
       const oldService2 = await tx.serviceOrder.findUnique({ where: { id } });
       if (!oldService2) throw new Error("Servi\xE7o n\xE3o encontrado");
@@ -68988,7 +68989,7 @@ app.patch("/api/services/:id", async (req, res) => {
       io2.emit("data-updated", { type: "transactions", action: "update" });
     }
     io2.emit("data-updated", { type: "services", action: "update" });
-    if (updaterId2) {
+    if (updaterId) {
       let logDetails = `Atualizou servi\xE7o ${service.deviceModel}`;
       if (status && status !== oldService.status) {
         logDetails += ` | Status: ${oldService.status} -> ${status}`;
@@ -68998,7 +68999,7 @@ app.patch("/api/services/:id", async (req, res) => {
         logDetails += ` | Pre\xE7o: ${oldService.price} -> ${price}`;
       }
       await createLog(
-        updaterId2,
+        updaterId,
         "SERVICE_UPDATE",
         "SERVICES",
         logDetails
@@ -69406,9 +69407,9 @@ app.put("/api/users/:id", async (req, res) => {
       where: { id },
       data: updateData
     });
-    const updaterId2 = req.headers["x-user-id"];
-    if (updaterId2) {
-      await createLog(updaterId2, "USER_UPDATE", "TEAM", `Atualizou o usu\xE1rio: ${user.name} (${user.role})`);
+    const updaterId = req.headers["x-user-id"];
+    if (updaterId) {
+      await createLog(updaterId, "USER_UPDATE", "TEAM", `Atualizou o usu\xE1rio: ${user.name} (${user.role})`);
     }
     const { password: _, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);

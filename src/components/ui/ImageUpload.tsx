@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { Upload, X, Loader2, Camera } from 'lucide-react';
-import { api } from '../../lib/api';
+
 
 interface ImageUploadProps {
     onUpload: (url: string) => void;
@@ -28,16 +28,35 @@ export default function ImageUpload({ onUpload, initialUrl, className = '', comp
             }
 
             const file = e.target.files[0];
-            const { url } = await api.upload(file);
 
-            setImageUrl(url);
-            onUpload(url);
+            // Validate file size (e.g., max 5MB to prevent browser crashes)
+            if (file.size > 5 * 1024 * 1024) {
+                setError('Imagem muito grande. Máximo 5MB.');
+                setUploading(false);
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setImageUrl(base64String);
+                onUpload(base64String);
+                setUploading(false);
+            };
+
+            reader.onerror = () => {
+                setError('Erro ao ler arquivo.');
+                setUploading(false);
+            };
+
+            reader.readAsDataURL(file);
+
         } catch (err: any) {
-            console.error('Error uploading image:', err);
-            setError('Erro ao carregar imagem. Tente novamente.');
-        } finally {
+            console.error('Error handling file:', err);
+            setError('Erro ao processar imagem.');
             setUploading(false);
-            // Reset inputs
+        } finally {
             if (fileInputRef.current) fileInputRef.current.value = '';
             if (cameraInputRef.current) cameraInputRef.current.value = '';
         }
