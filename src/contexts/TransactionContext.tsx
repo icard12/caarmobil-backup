@@ -40,6 +40,8 @@ interface TransactionContextType {
     updatePermissionRequestStatus: (id: string, status: 'approved' | 'rejected') => Promise<void>;
     recentTransactions: Transaction[];
     services: any[];
+    selectedDate: string;
+    setSelectedDate: (date: string) => void;
 }
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
@@ -52,6 +54,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     const [analyticsSummary, setAnalyticsSummary] = useState<any>(null);
     const [pendingRequests, setPendingRequests] = useState<PermissionRequest[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const { currentUser } = useTeam();
     const { addNotification } = useNotifications();
 
@@ -110,13 +113,13 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
             socket.off('data-updated', handleUpdate);
             socket.off('permission-request-updated', handlePermissionResult);
         };
-    }, [currentUser, addNotification]);
+    }, [currentUser, addNotification, selectedDate]);
 
     const refreshData = async () => {
         try {
             const [transData, statsData, productsData, servicesData, summaryData, requestsData] = await Promise.all([
                 api.transactions.list(),
-                api.stats.get(),
+                api.stats.get(selectedDate),
                 api.analytics.getProducts(),
                 api.services.list(),
                 api.analytics.getSummary(),
@@ -192,7 +195,9 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
             updateTransaction,
             updatePermissionRequestStatus,
             recentTransactions,
-            services
+            services,
+            selectedDate,
+            setSelectedDate
         }}>
             {children}
         </TransactionContext.Provider>

@@ -1728,6 +1728,106 @@ app.delete('/api/services/:id', async (req, res) => {
     }
 });
 
+// --- Daily Closing Logic ---
+async function performDailyClosing(date: Date) {
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    console.log(`[DailyClosing] Starting closing for ${dayStart.toISOString().split('T')[0]}...`);
+
+    const [transactions, services] = await Promise.all([
+        prisma.transaction.findMany({
+            where: {
+                date: { gte: dayStart, lte: dayEnd },
+                status: 'paid'
+            }
+        }),
+        prisma.serviceOrder.findMany({
+            where: {
+                created_at: { gte: dayStart, lte: dayEnd }
+            }
+        })
+    ]);
+
+    const servicesCount = services.length;
+    const servicesRevenue = transactions
+        .filter(t => t.category === 'Serviço de Reparo')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    const salesCount = transactions
+        .filter(t => t.category === 'Venda de Produto').length;
+    const salesRevenue = transactions
+        .filter(t => t.category === 'Venda de Produto')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalIncome = transactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    const expenses = transactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    const totalCOGS = transactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + (t.costAmount || 0), 0);
+
+    const totalEarnings = totalIncome - expenses - totalCOGS;
+
+    await prisma.dailyClosing.upsert({
+        where: { date: dayStart },
+        update: {
+            servicesCount,
+            servicesRevenue,
+            salesCount,
+            salesRevenue,
+            totalEarnings,
+            expenses,
+        },
+        create: {
+            date: dayStart,
+            servicesCount,
+            servicesRevenue,
+            salesCount,
+            salesRevenue,
+            totalEarnings,
+            expenses,
+        }
+    });
+
+    console.log(`[DailyClosing] Completed for ${dayStart.toISOString().split('T')[0]}.`);
+}
+
+async function ensureDailyClosings() {
+    try {
+        const lastClosing = await prisma.dailyClosing.findFirst({
+            orderBy: { date: 'desc' }
+        });
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let current = lastClosing
+            ? new Date(lastClosing.date.getTime() + 86400000)
+            : new Date(new Date().setDate(new Date().getDate() - 30)); // Look back 30 days if no records
+
+        current.setHours(0, 0, 0, 0);
+
+        while (current < today) {
+            await performDailyClosing(new Date(current));
+            current.setDate(current.getDate() + 1);
+        }
+    } catch (error) {
+        console.error('[DailyClosing] Error ensuring daily closings:', error);
+    }
+}
+
+// Run daily closing check on startup and then every hour
+setTimeout(() => ensureDailyClosings(), 5000);
+setInterval(ensureDailyClosings, 60 * 60 * 1000);
+
 // --- Statistics API ---
 // Test endpoint
 app.get('/api/test', (req, res) => {
@@ -1737,6 +1837,78 @@ app.get('/api/test', (req, res) => {
 console.log('Registering /api/stats endpoint...');
 app.get('/api/stats', async (req, res) => {
     try {
+        const { date } = req.query;
+        const requestedDate = date ? new Date(date as string) : new Date();
+        requestedDate.setHours(0, 0, 0, 0);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // If requested date is in the past, return from DailyClosing
+        if (requestedDate < today) {
+            const closing = await prisma.dailyClosing.findUnique({
+                where: { date: requestedDate }
+            });
+
+            if (closing) {
+                // We still need inventory values and global settings, but daily metrics come from history
+                const products = await prisma.product.findMany({ where: { isDeleted: false } });
+                const inventoryValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
+                const inventoryCostValue = products.reduce((sum, p) => sum + (p.costPrice * p.stock), 0);
+
+                return res.json({
+                    inventoryValue,
+                    inventoryCostValue,
+                    totalIncome: 0, // Not applicable for historical daily view in the way it's currently used
+                    productRevenue: closing.salesRevenue,
+                    serviceRevenue: closing.servicesRevenue,
+                    otherIncome: 0,
+                    totalExpenses: closing.expenses,
+                    totalInvestment: 0,
+                    totalCOGS: 0,
+                    totalBalance: await getCurrentBalance(),
+                    netProfit: closing.totalEarnings,
+                    todayServiceRevenue: closing.servicesRevenue,
+                    todayProductRevenue: closing.salesRevenue,
+                    todayIncome: closing.servicesRevenue + closing.salesRevenue,
+                    todayNetProfit: closing.totalEarnings,
+                    activeProducts: products.filter(p => p.stock > 0).length,
+                    totalProducts: products.length,
+                    pendingServices: 0,
+                    completedServices: closing.servicesCount,
+                    totalServices: 0,
+                    lowStockProducts: products.filter(p => p.stock <= p.minStock).length,
+                    totalStock: products.reduce((sum, p) => sum + p.stock, 0)
+                });
+            } else {
+                // If no record found for a past date, return zeros
+                return res.json({
+                    inventoryValue: 0,
+                    inventoryCostValue: 0,
+                    totalIncome: 0,
+                    productRevenue: 0,
+                    serviceRevenue: 0,
+                    otherIncome: 0,
+                    totalExpenses: 0,
+                    totalInvestment: 0,
+                    totalCOGS: 0,
+                    totalBalance: await getCurrentBalance(),
+                    netProfit: 0,
+                    todayServiceRevenue: 0,
+                    todayProductRevenue: 0,
+                    todayIncome: 0,
+                    todayNetProfit: 0,
+                    activeProducts: 0,
+                    totalProducts: 0,
+                    pendingServices: 0,
+                    completedServices: 0,
+                    totalServices: 0,
+                    lowStockProducts: 0,
+                    totalStock: 0
+                });
+            }
+        }
+
         const [products, transactions, services] = await Promise.all([
             prisma.product.findMany({ where: { isDeleted: false } }),
             prisma.transaction.findMany(), // Fetch all to include pending/overdue in metrics
@@ -1746,11 +1918,16 @@ app.get('/api/stats', async (req, res) => {
         const inventoryValue = products.reduce((sum, p) => sum + (p.price * p.stock), 0);
         const inventoryCostValue = products.reduce((sum, p) => sum + (p.costPrice * p.stock), 0);
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const dayStart = new Date(requestedDate);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(requestedDate);
+        dayEnd.setHours(23, 59, 59, 999);
 
         // All transactions for today (including pending/overdue to show "activity")
-        const todayTransactions = transactions.filter(t => new Date(t.date) >= today);
+        const todayTransactions = transactions.filter(t => {
+            const tDate = new Date(t.date);
+            return tDate >= dayStart && tDate <= dayEnd;
+        });
 
         // Cumulative Metrics (Usually focus on REALized flow)
         const paidTransactions = transactions.filter(t => t.status === 'paid');
@@ -1799,14 +1976,14 @@ app.get('/api/stats', async (req, res) => {
             .reduce((sum, t) => sum + t.amount, 0);
 
         const todayExpenses = todayTransactions
-            .filter(t => t.type === 'expense')
+            .filter(t => t.type === 'expense' && t.status === 'paid')
             .reduce((sum, t) => sum + t.amount, 0);
 
         const todayCOGS = todayTransactions
-            .filter(t => t.type === 'income')
+            .filter(t => t.type === 'income' && t.status === 'paid')
             .reduce((sum, t) => sum + (t.costAmount || 0), 0);
 
-        console.log(`[Stats] Today: ${todayTransactions.length} trans, Income: ${todayIncome}, ProdRev: ${todayProductRevenue}, ServRev: ${todayServiceRevenue}`);
+        console.log(`[Stats] Requested: ${dayStart.toISOString().split('T')[0]}, Trans: ${todayTransactions.length}, Income: ${todayIncome}`);
 
         res.json({
             inventoryValue,

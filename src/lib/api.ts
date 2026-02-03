@@ -133,8 +133,8 @@ export const api = {
         }
     },
     stats: {
-        get: async () => {
-            const res = await fetch(`${API_URL}/stats`);
+        get: async (date?: string) => {
+            const res = await fetch(`${API_URL}/stats${date ? `?date=${date}` : ''}`);
             if (!res.ok) throw new Error(`Erro ao buscar estatísticas (${res.status})`);
             return res.json();
         }

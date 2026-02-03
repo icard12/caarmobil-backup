@@ -128,3 +128,14 @@ model PermissionRequest {
   updatedAt DateTime @updatedAt
 }
 
+model DailyClosing {
+  id              String   @id @default(uuid())
+  date            DateTime @unique
+  servicesCount   Int
+  servicesRevenue Float
+  salesCount      Int
+  salesRevenue    Float
+  totalEarnings   Float    // Net Profit
+  expenses        Float
+  createdAt       DateTime @default(now())
+}
