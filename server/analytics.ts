@@ -81,12 +81,13 @@ async function getTotalSales(productId: string): Promise<number> {
         where: {
             productId,
             type: 'exit',
-            // Exclude manual adjustments from sales count (Fixed)
+            // Exclude manual adjustments from sales count (Case-insensitive check)
             NOT: {
                 OR: [
-                    { reason: { contains: 'Ajuste' } },
-                    { reason: { contains: 'Manual' } },
-                    { reason: { contains: 'Correction' } }
+                    { reason: { contains: 'Ajuste', mode: 'insensitive' } },
+                    { reason: { contains: 'Manual', mode: 'insensitive' } },
+                    { reason: { contains: 'Correction', mode: 'insensitive' } },
+                    { reason: { contains: 'Correção', mode: 'insensitive' } }
                 ]
             }
         }
@@ -376,7 +377,8 @@ export async function getAnalyticsSummary(): Promise<AnalyticsSummary> {
         noMovementProducts: analytics.filter(p => p.status === 'no-movement').length,
         averageSalesVelocity: analytics.length > 0
             ? analytics.reduce((sum, p) => sum + p.salesVelocity, 0) / analytics.length
-            : 0
+            : 0,
+        totalStock: analytics.reduce((sum, p) => sum + p.stock, 0)
     };
 
     return {

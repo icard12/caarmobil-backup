@@ -407,10 +407,7 @@ app.post('/api/products', async (req, res) => {
         const creatorId = req.headers['x-user-id'] as string;
         if (!creatorId) return res.status(401).json({ error: 'Usuário não identificado' });
 
-        const user = await prisma.user.findUnique({ where: { id: creatorId } });
-        if (user?.role !== 'admin') {
-            return res.status(403).json({ error: 'Somente administradores podem adicionar produtos diretamente' });
-        }
+        // Removed admin check to allow non-admins to add products directly
 
         const { name, price, costPrice, stock, ...rest } = req.body;
         const stockQty = parseInt(stock) || 0;
@@ -515,10 +512,7 @@ app.patch('/api/products/:id', async (req, res) => {
         const updaterId = req.headers['x-user-id'] as string;
         if (!updaterId) return res.status(401).json({ error: 'Usuário não identificado' });
 
-        const user = await prisma.user.findUnique({ where: { id: updaterId } });
-        if (user?.role !== 'admin') {
-            return res.status(403).json({ error: 'Somente administradores podem editar produtos' });
-        }
+        // Removed admin check to allow non-admins to edit products
 
         const { name, price, costPrice, stock, minStock, ...rest } = req.body;
 
@@ -609,13 +603,7 @@ app.post('/api/products/adjust-stock', async (req, res) => {
         if (!requesterId) return res.status(401).json({ error: 'Usuário não identificado' });
         const requester = await prisma.user.findUnique({ where: { id: requesterId } });
 
-        // Block manual adjustments for non-admins
-        // Note: Quick Sell in frontend uses adjust-stock with type='exit'. 
-        // If the user wants NO changes, we should block this too or handle it carefully.
-        // For now, let's enforce admin for EVERYTHING in adjust-stock as requested.
-        if (requester?.role !== 'admin') {
-            return res.status(403).json({ error: 'Apenas administradores podem ajustar o estoque diretamente' });
-        }
+        // Admin check removed for adjust-stock to allow Quick Sales and corrections by non-admins
 
         if (!productId || !userId || !type || quantity === undefined) {
             return res.status(400).json({ error: 'Campos obrigatórios ausentes' });
@@ -675,7 +663,7 @@ app.post('/api/products/adjust-stock', async (req, res) => {
                     userId,
                     type,
                     quantity: qty,
-                    reason: reason || (type === 'exit' ? 'Venda/Saída' : 'Entrada/Ajuste'),
+                    reason: reason || (type === 'exit' ? (isFinancial ? 'Venda/Saída' : 'Ajuste Manual (Saída)') : 'Entrada/Ajuste'),
                 }
             });
 
@@ -727,13 +715,9 @@ app.delete('/api/products', async (req, res) => {
     try {
         const { ids } = req.body; // Expecting { ids: ["id1", "id2"] }
         const deleterId = req.headers['x-user-id'] as string;
-
         if (!deleterId) return res.status(401).json({ error: 'Usuário não identificado' });
 
-        const user = await prisma.user.findUnique({ where: { id: deleterId } });
-        if (user?.role !== 'admin') {
-            return res.status(403).json({ error: 'Somente administradores podem excluir produtos' });
-        }
+        // Removed admin check to allow non-admins to delete products
 
         if (!ids || !Array.isArray(ids)) {
             return res.status(400).json({ error: "Invalid IDs format" });
@@ -1699,9 +1683,7 @@ app.delete('/api/services/:id', async (req, res) => {
         const requesterId = req.headers['x-user-id'] as string;
         const requester = await prisma.user.findUnique({ where: { id: requesterId || '' } });
 
-        if (requester?.role !== 'admin') {
-            return res.status(403).json({ error: 'Acesso negado: Somente administradores podem excluir serviços' });
-        }
+        // Removed admin check to allow non-admins to delete services
 
         const { id } = req.params;
         const service = await prisma.serviceOrder.findUnique({
@@ -1845,7 +1827,8 @@ app.get('/api/stats', async (req, res) => {
             pendingServices,
             completedServices,
             totalServices: services.length,
-            lowStockProducts: products.filter(p => p.stock <= p.minStock).length
+            lowStockProducts: products.filter(p => p.stock <= p.minStock).length,
+            totalStock: products.reduce((sum, p) => sum + p.stock, 0)
         });
     } catch (error) {
         handlePrismaError(res, error, 'Erro ao buscar estatísticas');

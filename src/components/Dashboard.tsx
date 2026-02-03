@@ -63,6 +63,8 @@ export default function Dashboard({ searchQuery = '', onNavigate }: DashboardPro
   const handleBulkDelete = async (ids: string[]) => {
     if (!confirm(t('deleteConfirm').replace('{count}', ids.length.toString()))) return;
 
+    // Removed admin check to allow direct deletion for all users as requested
+    /*
     if (!isAdmin) {
       try {
         for (const id of ids) {
@@ -79,6 +81,7 @@ export default function Dashboard({ searchQuery = '', onNavigate }: DashboardPro
         return;
       }
     }
+    */
 
     try {
       await api.products.delete(ids);
@@ -347,8 +350,19 @@ export default function Dashboard({ searchQuery = '', onNavigate }: DashboardPro
                 <ShoppingBag className="w-3.5 h-3.5 lg:w-5 lg:h-5 text-blue-600" />
               </div>
             </div>
-            <p className="text-base lg:text-3xl font-black text-[var(--text-main)] tracking-tighter">MT {stats.inventoryValue.toLocaleString(locale, { minimumFractionDigits: 2 })}</p>
-            <p className="text-[8px] lg:text-[10px] font-bold text-[var(--text-muted)] mt-1.5 uppercase tracking-tight truncate">{stats.totalProducts} {t('items').toUpperCase()}</p>
+            <p className="text-base lg:text-3xl font-black text-[var(--text-main)] tracking-tighter italic">MT {stats.inventoryValue.toLocaleString(locale, { minimumFractionDigits: 2 })}</p>
+
+            <div className="mt-2 lg:mt-5 pt-2 lg:pt-5 border-t border-slate-50 flex gap-2 lg:gap-4 overflow-hidden">
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-[7px] font-bold text-[var(--text-muted)] uppercase truncate">{t('items')}</p>
+                <p className="text-[9px] lg:text-[11px] font-black text-[var(--text-main)] truncate">{stats.totalProducts}</p>
+              </div>
+              <div className="w-[1px] h-4 lg:h-6 bg-[var(--border-subtle)] self-center shrink-0" />
+              <div className="space-y-0.5 min-w-0">
+                <p className="text-[7px] font-bold text-[var(--text-muted)] uppercase truncate">{t('totalUnits') || 'Unidades Totais'}</p>
+                <p className="text-[9px] lg:text-[11px] font-black text-[#FF4700] truncate">{stats.totalStock || products.reduce((sum, p) => sum + p.stock, 0)}</p>
+              </div>
+            </div>
           </motion.div>
         </motion.div>
       )}

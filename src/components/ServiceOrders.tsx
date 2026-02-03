@@ -103,6 +103,8 @@ export default function ServiceOrders() {
         const id = confirmToDelete;
         setConfirmToDelete(null);
 
+        // Admin check removed to allow direct deletion of services as requested
+        /*
         if (!isAdmin) {
             try {
                 await api.permissionRequests.create({
@@ -117,6 +119,7 @@ export default function ServiceOrders() {
                 return;
             }
         }
+        */
 
         try {
             await api.services.delete(id);
@@ -231,7 +234,7 @@ export default function ServiceOrders() {
                     className="flex items-center justify-center gap-2 px-6 py-3 lg:py-3.5 bg-[#FF4700] text-white text-[11px] lg:text-sm font-bold rounded-xl shadow-glow-orange hover:bg-[#E64000] transition-all active:scale-95 w-full md:w-auto"
                 >
                     <Plus className="w-5 h-5 lg:w-4 lg:h-4" />
-                    <span>{isAdmin ? t('newService') : 'Solicitar Serviço'}</span>
+                    <span>{t('newService')}</span>
                 </button>
             </div>
 
@@ -366,7 +369,7 @@ export default function ServiceOrders() {
                                                     className={`flex items-center gap-2 px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider border ${isPending && !isAdmin ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-100'}`}
                                                 >
                                                     {isPending && !isAdmin ? <Clock className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}
-                                                    {isAdmin ? t('start') : (isPending ? 'Pendente' : 'Soli. Início')}
+                                                    {t('start')}
                                                 </button>
                                             )}
                                             {service.status === 'in_progress' && (
@@ -376,7 +379,7 @@ export default function ServiceOrders() {
                                                     className={`flex items-center gap-2 px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider border ${isPending && !isAdmin ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'bg-orange-50 text-orange-600 hover:bg-orange-100 border-orange-100'}`}
                                                 >
                                                     {isPending && !isAdmin ? <Clock className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                                                    {isAdmin ? t('finish') : (isPending ? 'Pendente' : 'Soli. Término')}
+                                                    {t('finish')}
                                                 </button>
                                             )}
                                             {service.status === 'finished' && (
@@ -386,14 +389,14 @@ export default function ServiceOrders() {
                                                     className={`flex items-center gap-2 px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-wider border ${isPending && !isAdmin ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' : 'bg-green-50 text-green-600 hover:bg-green-100 border-green-100'}`}
                                                 >
                                                     {isPending && !isAdmin ? <Clock className="w-3.5 h-3.5" /> : <Package className="w-3.5 h-3.5" />}
-                                                    {isAdmin ? t('deliver') : (isPending ? 'Pendente' : 'Soli. Entrega')}
+                                                    {t('deliver')}
                                                 </button>
                                             )}
                                             <button
                                                 onClick={() => !isPending && handleEditService(service)}
                                                 disabled={isPending && !isAdmin}
                                                 className={`p-2.5 rounded-xl border transition-all ${isPending && !isAdmin ? 'bg-slate-50 text-slate-200 border-slate-100 cursor-not-allowed' : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-100'}`}
-                                                title={isAdmin ? t('edit') : (isPending ? 'Solicitação Pendente' : 'Solicitar Edição')}
+                                                title={t('edit')}
                                             >
                                                 <Pencil className="w-4 h-4" />
                                             </button>
@@ -401,7 +404,7 @@ export default function ServiceOrders() {
                                                 onClick={() => !isPending && handleDeleteService(service.id)}
                                                 disabled={isPending && !isAdmin}
                                                 className={`p-2.5 rounded-xl border transition-all ${isPending && !isAdmin ? 'bg-slate-50 text-slate-200 border-slate-100 cursor-not-allowed' : 'bg-rose-50 text-rose-600 hover:bg-rose-100 border-rose-100'}`}
-                                                title={isAdmin ? t('delete') : (isPending ? 'Solicitação Pendente' : 'Solicitar Exclusão')}
+                                                title={t('delete')}
                                             >
                                                 <Trash className="w-4 h-4" />
                                             </button>
@@ -435,7 +438,7 @@ export default function ServiceOrders() {
                             <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-3 sm:hidden" />
                             <div className="flex items-center justify-between mb-2 sm:mb-4 sticky top-0 bg-white z-10 pb-1">
                                 <div>
-                                    <h2 className="text-sm sm:text-lg font-black text-slate-900 tracking-tight">{editingId ? (isAdmin ? 'Editar' : 'Pedir Edição') : (isAdmin ? 'Novo' : 'Enviar Pedido')}</h2>
+                                    <h2 className="text-sm sm:text-lg font-black text-slate-900 tracking-tight">{editingId ? t('edit') : t('newService')}</h2>
                                     <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-0.5">{editingId ? 'Atualizar' : 'Novo Registro'}</p>
                                 </div>
                                 <button onClick={() => { setShowForm(false); setEditingId(null); }} className="w-8 h-8 flex items-center justify-center bg-slate-100 text-slate-500 hover:text-slate-900 rounded-full transition-all">
@@ -603,7 +606,7 @@ export default function ServiceOrders() {
                                     className="w-full py-3 sm:py-5 bg-gradient-to-r from-[#FF4700] to-[#FF6A00] text-white font-black uppercase text-xs lg:text-sm tracking-[0.2em] rounded-24 lg:rounded-2xl shadow-glow-orange hover:brightness-110 active:scale-[0.98] transition-all mt-2 mb-1 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                                    {editingId ? (isAdmin ? t('save') : 'Solicitar Alteração') : (isAdmin ? t('newService') : 'Enviar Solicitação')}
+                                    {editingId ? t('save') : t('newService')}
                                 </button>
                             </div>
                         </motion.div>
@@ -626,7 +629,7 @@ export default function ServiceOrders() {
                                 </div>
                                 <h3 className="text-base sm:text-xl font-black text-slate-900 mb-1">Eliminar Serviço</h3>
                                 <p className="text-slate-500 text-[11px] sm:text-sm font-bold mb-6">
-                                    Tem certeza que deseja {isAdmin ? 'remover este serviço?' : 'solicitar a remoção deste serviço?'}
+                                    Tem certeza que deseja remover este serviço?
                                 </p>
 
                                 <div className="flex flex-col w-full gap-2">
@@ -634,7 +637,7 @@ export default function ServiceOrders() {
                                         onClick={executeDeleteService}
                                         className="w-full py-2.5 bg-red-600 text-white font-black uppercase text-[10px] tracking-wider rounded-xl shadow-lg active:scale-95 transition-all"
                                     >
-                                        {isAdmin ? t('delete') : 'Solicitar'}
+                                        {t('delete')}
                                     </button>
                                     <button
                                         onClick={() => setConfirmToDelete(null)}

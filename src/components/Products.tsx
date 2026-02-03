@@ -93,6 +93,8 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
             return;
         }
 
+        // Admin check removed to allow direct stock adjustment by all users
+        /*
         if (!isAdmin && !isQuickSell) {
             try {
                 await api.permissionRequests.create({
@@ -100,7 +102,6 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
                     details: {
                         ...selectedProduct,
                         stock: selectedProduct.stock + (adjustData.type === 'entry' ? qty : -qty),
-                        // Add reason to details so admin can see why
                         _reason: adjustData.reason || (adjustData.type === 'entry' ? 'Entrada Manual' : 'Saída Manual')
                     },
                     targetId: selectedProduct.id
@@ -113,6 +114,7 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
                 return;
             }
         }
+        */
 
         try {
             await api.products.adjustStock({
@@ -163,6 +165,8 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
             image_url: formData.image_url,
         };
 
+        // Admin check removed to allow direct product creation/update by all users
+        /*
         if (!isAdmin) {
             try {
                 await api.permissionRequests.create({
@@ -181,6 +185,7 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
                 return;
             }
         }
+        */
 
         if (isSaving) return;
         setIsSaving(true);
@@ -258,6 +263,8 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
         const id = confirmToDelete;
         setConfirmToDelete(null);
 
+        // Admin check removed to allow direct product deletion by all users
+        /*
         if (!isAdmin) {
             try {
                 await api.permissionRequests.create({
@@ -272,6 +279,7 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
                 return;
             }
         }
+        */
 
         try {
             await api.products.delete([id]);
@@ -299,6 +307,8 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
         if (!currentUser) return;
         setConfirmQuickSell(null);
 
+        // Admin check removed to allow direct quick sell by all users
+        /*
         if (!isAdmin) {
             // Check if it's a quick sell (decreasing stock by 1)
             // Normal users and managers are allowed to SELL without admin permission
@@ -322,6 +332,7 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
                 }
             }
         }
+        */
 
         setIsSellingId(product.id);
         try {
@@ -544,7 +555,7 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
                     className="flex items-center justify-center gap-2 px-6 py-3 lg:py-3 bg-[#FF4700] text-white text-xs lg:text-sm font-bold rounded-xl shadow-glow-orange hover:bg-[#E64000] transition-all active:scale-95 w-full md:w-auto"
                 >
                     <Plus className="w-5 h-5" />
-                    <span>{isAdmin ? t('addProduct') : 'Solicitar Adição'}</span>
+                    <span>{t('addProduct')}</span>
                 </button>
             </div>
 
@@ -572,7 +583,7 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
 
                             <div className="flex items-center justify-between mb-1 sm:mb-4">
                                 <h2 className="text-sm sm:text-lg font-bold text-[var(--text-main)] tracking-tight">
-                                    {isAdmin ? (isEditing ? 'Editar' : 'Novo') : 'Enviar'}
+                                    {isEditing ? t('edit') : 'Novo'}
                                 </h2>
                                 <button onClick={() => setShowForm(false)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors p-1">
                                     <X className="w-4 h-4" />
@@ -677,7 +688,7 @@ export default function Products({ searchQuery = '' }: ProductsProps) {
                                     ) : (
                                         <Plus className="w-3 h-3" />
                                     )}
-                                    <span>{isAdmin ? (isEditing ? t('save') : 'Adicionar') : 'Enviar'}</span>
+                                    <span>{isEditing ? t('save') : t('add')}</span>
                                 </button>
                             </div>
                         </motion.div>
