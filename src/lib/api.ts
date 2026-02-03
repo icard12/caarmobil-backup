@@ -98,8 +98,8 @@ export const api = {
         }
     },
     services: {
-        list: async () => {
-            const res = await fetch(`${API_URL}/services`);
+        list: async (date?: string) => {
+            const res = await fetch(`${API_URL}/services${date ? `?date=${date}` : ''}`);
             if (!res.ok) throw new Error(`Erro ao buscar serviços (${res.status})`);
             const data = await res.json();
             return Array.isArray(data) ? data : [];

@@ -121,7 +121,7 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
                 api.transactions.list(),
                 api.stats.get(selectedDate),
                 api.analytics.getProducts(),
-                api.services.list(),
+                api.services.list(selectedDate),
                 api.analytics.getSummary(),
                 api.permissionRequests.list()
             ]);

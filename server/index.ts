@@ -1420,7 +1420,24 @@ app.get('/api/stock-movements', async (req, res) => {
 app.get('/api/services', async (req, res) => {
     console.log('GET /api/services - Fetching orders');
     try {
+        const { date } = req.query;
+        const whereClause: any = {};
+
+        if (date) {
+            const filterDate = new Date(date as string);
+            const dayStart = new Date(filterDate);
+            dayStart.setHours(0, 0, 0, 0);
+            const dayEnd = new Date(filterDate);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            whereClause.created_at = {
+                gte: dayStart,
+                lte: dayEnd
+            };
+        }
+
         const services = await prisma.serviceOrder.findMany({
+            where: whereClause,
             include: {
                 parts: {
                     include: {
@@ -1432,7 +1449,7 @@ app.get('/api/services', async (req, res) => {
             },
             orderBy: { created_at: 'desc' }
         });
-        console.log(`Found ${services.length} services`);
+        console.log(`Found ${services.length} services${date ? ` for date ${date}` : ' (All Time)'}`);
 
         // Map backend field names to match frontend expectation
         const mappedServices = services.map(s => ({
